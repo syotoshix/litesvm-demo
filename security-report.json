@@ -1,0 +1,34 @@
+{
+  "id": "POE-2024-001",
+  "title": "Missing Signer Authorization Check in Vault Admin Withdrawal",
+  "severity": "CRITICAL",
+  "vulnerability_type": "Missing Signer Authorization Check",
+  "cwe": "CWE-862 (Missing Authorization)",
+  "cvss_score": 9.8,
+  "affected_program": "vulnerable-vault",
+  "affected_instruction": "AdminWithdraw",
+  "description": "The AdminWithdraw instruction verifies that the provided admin account's public key matches the stored admin public key, but it never verifies that the admin account actually signed the transaction. Because Solana's runtime only enforces that accounts marked is_signer=true in AccountMeta are present in the transaction's signature set, an attacker can pass the admin's public key with is_signer=false and the on-chain check will pass without the real admin's involvement.",
+  "vulnerable_code_location": "vulnerable-vault/src/lib.rs — process_admin_withdraw()",
+  "root_cause": "The program performs an identity check (pubkey equality) but omits the authorization check (is_signer). In Solana, these are two separate runtime properties. Verifying a pubkey only proves the attacker knows the admin's address (which is public); verifying is_signer proves the admin cryptographically approved the transaction.",
+  "impact": "Any attacker with knowledge of the admin's public key (which is on-chain and publicly visible) can drain the entire vault balance without the admin's knowledge or private key.",
+  "fix": "Add the missing guard in process_admin_withdraw before the lamport transfer:\n\n  if !admin_account.is_signer {\n      return Err(ProgramError::MissingRequiredSignature);\n  }",
+  "references": [
+    "https://solanacookbook.com/references/programs.html#how-to-verify-accounts",
+    "https://github.com/coral-xyz/sealevel-attacks/tree/master/programs/2-signer-authorization"
+  ],
+  "proof_of_concept": {
+    "description": "Construct a transaction that calls AdminWithdraw with the admin's pubkey listed as a non-signing account, signed only by the attacker.",
+    "setup": [
+      "Deploy the vulnerable-vault program to a local LiteSVM environment",
+      "Call Initialize to record the admin's pubkey in the vault's on-chain state",
+      "Fund the vault with 5 SOL (representing victim deposits)"
+    ],
+    "exploit_steps": [
+      "Build an AdminWithdraw instruction with: vault (writable), admin pubkey (readonly, is_signer=false), attacker address (writable, recipient)",
+      "Sign the transaction with only the attacker's keypair — admin does NOT sign",
+      "Submit transaction to the runtime"
+    ],
+    "expected_outcome": "Transaction succeeds; vault is drained to zero; attacker receives all deposited SOL",
+    "success_criteria": "vault_balance_after == rent_exempt_minimum AND attacker_balance_after > attacker_balance_before"
+  }
+}

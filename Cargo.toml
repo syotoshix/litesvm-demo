@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "vulnerable-vault",
+    "proof-of-exploit",
+]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+lto = "thick"
+codegen-units = 1
+opt-level = 3

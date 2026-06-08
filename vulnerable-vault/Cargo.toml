@@ -1,0 +1,18 @@
+[package]
+name = "vulnerable-vault"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+default = []
+# Enable this to demonstrate the patched (fixed) version of the program.
+# Build with: cargo build-sbf --features patched
+patched = []
+
+[dependencies]
+solana-program = "2"
+borsh = { version = "1", features = ["derive"] }
+
