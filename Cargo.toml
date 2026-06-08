@@ -7,6 +7,6 @@ resolver = "2"
 
 [profile.release]
 overflow-checks = true
-lto = "thick"
+lto = "fat"
 codegen-units = 1
 opt-level = 3
